@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofCheck - Payment Screenshot & Invoice Fraud Detector</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h1 { font-size: 24px; margin-bottom: 5px; color: #1a1a1a; }
+        p.subtitle { color: #666; font-size: 14px; margin-bottom: 25px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: #fafbfc; border: 1px solid #e1e4e8; border-radius: 6px; padding: 20px; }
+        .card h2 { font-size: 16px; margin-top: 0; color: #24292e; }
+        .upload-box { border: 2px dashed #d1d5da; border-radius: 6px; padding: 30px; text-align: center; background: #fff; cursor: pointer; margin-bottom: 15px; }
+        .upload-box:hover { border-color: #0366d6; }
+        input[type="file"] { display: none; }
+        button { background: #2ea44f; color: white; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; }
+        button:hover { background: #2c974b; }
+        #preview-container { text-align: center; margin-top: 10px; }
+        #preview-img { max-width: 100%; max-height: 200px; border-radius: 4px; }
+        #result-box { white-space: pre-wrap; font-size: 14px; line-height: 1.5; color: #24292e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ProofCheck</h1>
+        <p class="subtitle">AI-powered screenshot & invoice fraud detector</p>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>Upload a screenshot</h2>
+                <div class="upload-box" onclick="document.getElementById('file-input').click()">
+                    <p>Click to upload image, or drag & drop here</p>
+                    <input type="file" id="file-input" accept="image/*" onchange="previewFile()">
+                </div>
+                <div id="preview-container"></div>
+                <button onclick="analyzeScreenshot()">Analyze Screenshot</button>
+            </div>
+            
+            <div class="card">
+                <h2>Audit result</h2>
+                <div id="result-box">Upload a screenshot and choose Analyze screenshot. The verdict, confidence and audit findings will appear here.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function previewFile() {
+            const file = document.getElementById('file-input').files[0];
+            const previewContainer = document.getElementById('preview-container');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewContainer.innerHTML = `<img id="preview-img" src="${e.target.result}" alt="Preview">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function analyzeScreenshot() {
+            const fileInput = document.getElementById('file-input');
+            const resultBox = document.getElementById('result-box');
+            
+            if (fileInput.files.length === 0) {
+                alert('Pehle ek screenshot upload karein!');
+                return;
+            }
+
+            resultBox.innerHTML = 'Analyzing screenshot... Kripya intezaar karein.';
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async function() {
+                const base64Data = reader.result.split(',')[1];
+                
+                try {
+                    const response = await fetch('/.netlify/functions/notify-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: base64Data })
+                    });
+                    
+                    const data = await response.json();
+                    if (response.ok) {
+                        resultBox.innerHTML = JSON.stringify(data, null, 2);
+                    } else {
+                        resultBox.innerHTML = 'Error: ' + (data.error || 'Kuch gadbad ho gayi.');
+                    }
+                } catch (err) {
+                    resultBox.innerHTML = 'Request fail ho gayi: ' + err.message;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
